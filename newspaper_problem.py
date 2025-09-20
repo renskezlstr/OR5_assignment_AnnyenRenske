@@ -1,4 +1,6 @@
 # Opdracht 1 voorbeeld van de les van week 1
+# deze moeten we zo aanpassen dat het met 120 locaties is en 
+# verdeeld is over 4 krantjochies
 NUM_LOCATIONS = 4
 locations = range(0,NUM_LOCATIONS)
 coordinates = [(0,0), (0,1), (0.5,1), (0.5,0)]
