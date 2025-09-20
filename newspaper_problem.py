@@ -17,5 +17,3 @@ for i in range(len(tour)-1):
 tour_length += distance_matrix[tour[-1],tour[0]]
 
 tour_length
-
-hoi
