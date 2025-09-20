@@ -1,6 +1,4 @@
-print("hallo renske")
-
-# Opdracht 1 
+# Opdracht 1 voorbeeld van de les van week 1
 NUM_LOCATIONS = 4
 locations = range(0,NUM_LOCATIONS)
 coordinates = [(0,0), (0,1), (0.5,1), (0.5,0)]
