@@ -1,9 +1,11 @@
 # Opdracht 1 voorbeeld van de les van week 1
 # deze moeten we zo aanpassen dat het met 120 locaties is en 
 # verdeeld is over 4 krantjochies
-NUM_LOCATIONS = 4
+NUM_LOCATIONS = 120
+# dit verandert dan naar 120
 locations = range(0,NUM_LOCATIONS)
 coordinates = [(0,0), (0,1), (0.5,1), (0.5,0)]
+# in plaats van coordinaten moeten we bestand aflezen
 distance_matrix = {}
 for from_loc in locations:
     for to_loc in locations:
