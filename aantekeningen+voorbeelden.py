@@ -14,8 +14,7 @@ depot_y = depot_row["ycoord"]
 depot = (depot_x, depot_y)
 
 
-
-# 1. alle rijen behalve de eerste pakken
+# ervoor zorgen dat ook de alle eerste rij wordt gebruikt
 stops_df = df.iloc[1:]
 
 # 2. kopie maken zodat we het origineel niet slopen
