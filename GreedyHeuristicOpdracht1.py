@@ -47,10 +47,10 @@ for d in range(NUM_DRIVERS):
 tour_lengths = []
 for tour in tours:
     tour_length = 0
-    full_tour = [0] + tour + [0] 
+    full_tour = [0] + tour 
     for i in range(len(full_tour)-1):
         tour_length += distance_matrix[(full_tour[i], full_tour[i+1])]
     tour_lengths.append(tour_length)
 
 for d, L in enumerate(tour_lengths, start=1):
-    print(f"Tour {d} lengte: {L}")
+    print(f"Tour {d} lengte: {L} km")
