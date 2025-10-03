@@ -1,184 +1,178 @@
 import pandas as pd
 import math
-import random
-from typing import List, Tuple, Dict
 
-# ==============================
-# Config
-# ==============================
-INSTANCE_FILE = "newspaper problem instance.xlsx"   # zelfde als jouw script
-DEPOT_INDEX = 0                                     # depot is rij 0
-NUM_DRIVERS = 4
-STOPS_PER_DRIVER = 30
-SEED = 42
-random.seed(SEED)
+# ===== Inlezen (zelfde als jouw script) =====
+df = pd.read_excel("newspaper problem instance.xlsx")
 
-# ==============================
-# Data inlezen + afstandsmatrix
-# ==============================
-df = pd.read_excel(INSTANCE_FILE)
+coordinates = []
+for i in range(len(df)):
+    coordinates.append((df.iloc[i]["xcoord"], df.iloc[i]["ycoord"]))
 
-# lijst met coördinaten maken (zelfde naam als bij jou)
-coordinates: List[Tuple[float, float]] = [
-    (df.iloc[i]["xcoord"], df.iloc[i]["ycoord"]) for i in range(len(df))
-]
 NUM_LOCATIONS = len(coordinates)
 
-def euclid(a: Tuple[float, float], b: Tuple[float, float]) -> float:
-    dx, dy = a[0]-b[0], a[1]-b[1]
-    return math.hypot(dx, dy)
+# ===== Afstandsmatrix =====
+distance_matrix = {}
+for i in range(NUM_LOCATIONS):
+    for j in range(NUM_LOCATIONS):
+        dx = coordinates[i][0] - coordinates[j][0]
+        dy = coordinates[i][1] - coordinates[j][1]
+        distance_matrix[(i, j)] = math.hypot(dx, dy)
 
-# afstandsmatrix bouwen (zelfde idee als jouw script, maar iets sneller in lijstvorm)
-# distance_matrix[i][j] i->j
-distance_matrix: List[List[float]] = [
-    [euclid(coordinates[i], coordinates[j]) for j in range(NUM_LOCATIONS)]
-    for i in range(NUM_LOCATIONS)
-]
+# ===== Config =====
+NUM_DRIVERS = 4
+STOPS_PER_DRIVER = 30      # <-- harde eis: 30 per driver
+DEPOT = 0
+VERBOSE = True
 
-# ==============================
-# Helpers
-# ==============================
-def tour_length_with_depot(tour: List[int]) -> float:
-    """Lengte van tour inclusief start/finish bij depot."""
+# === Sanity check: exact aantal stops beschikbaar? ===
+num_stops = NUM_LOCATIONS - 1  # excl. depot
+required = NUM_DRIVERS * STOPS_PER_DRIVER
+if num_stops != required:
+    raise ValueError(
+        f"Je instance heeft {num_stops} stops (excl. depot), maar je eist {STOPS_PER_DRIVER} x {NUM_DRIVERS} = {required}. "
+        "Fix je data of pas NUM_DRIVERS/STOPS_PER_DRIVER aan."
+    )
+
+# ===== Helpers =====
+def tour_length_with_depot(tour):
+    """Lengte inclusief 0 -> ... -> 0"""
     if not tour:
         return 0.0
-    full = [DEPOT_INDEX] + tour + [DEPOT_INDEX]
-    return sum(distance_matrix[full[i]][full[i+1]] for i in range(len(full)-1))
+    full = [DEPOT] + tour + [DEPOT]
+    L = 0.0
+    for i in range(len(full) - 1):
+        L += distance_matrix[(full[i], full[i+1])]
+    return L
 
-def nearest_unassigned(current: int, unassigned: set) -> int:
-    """Pak dichtstbijzijnde onverdeelde stop vanaf current."""
-    return min(unassigned, key=lambda j: distance_matrix[current][j])
-
-# ==============================
-# Greedy assignment (jouw vibe)
-# ==============================
-def build_greedy_tours(num_drivers: int, stops_per_driver: int) -> List[List[int]]:
+def marginal_append_cost(current_end, tour_is_empty, j):
     """
-    Verdeel alle stops greedy: per driver steeds de dichtstbijzijnde unassigned,
-    startend vanaf het depot.
+    Kostenstijging als we stop j achteraan toevoegen.
+    - Als tour leeg is: 0->j->0
+    - Anders: vervang 'end->0' door 'end->j->0'
     """
-    # alle niet-depot stops
-    unassigned = set(range(NUM_LOCATIONS)) - {DEPOT_INDEX}
+    if tour_is_empty:
+        return distance_matrix[(DEPOT, j)] + distance_matrix[(j, DEPOT)]
+    old_return = distance_matrix[(current_end, DEPOT)]
+    new_leg = distance_matrix[(current_end, j)] + distance_matrix[(j, DEPOT)]
+    return new_leg - old_return
 
-    tours: List[List[int]] = [[] for _ in range(num_drivers)]
-    current: List[int] = [DEPOT_INDEX] * num_drivers
+# ===== Fair greedy met harde cap 30 per driver =====
+unassigned = set(range(1, NUM_LOCATIONS))  # alles behalve depot
+tours = [[] for _ in range(NUM_DRIVERS)]
+current_end = [DEPOT] * NUM_DRIVERS
+tour_lengths = [0.0] * NUM_DRIVERS  # actuele lengte incl. terug naar depot
 
-    # zolang er nog wat te verdelen is, loop drivers rond
-    d = 0
-    while unassigned:
-        # sla driver over als ze al vol zitten
-        if len(tours[d]) < stops_per_driver:
-            j = nearest_unassigned(current[d], unassigned)
-            tours[d].append(j)
-            unassigned.remove(j)
-            current[d] = j
-        # volgende driver
-        d = (d + 1) % num_drivers
+step = 1
+assignment_log = []  # (step, driver, stop, old_len, delta, new_len)
 
-        # safety: als iedereen vol zit maar er toch nog unassigned over zijn (te veel stops),
-        # gooi ze dan bij de kortste tour (solid, low-effort fix).
-        if all(len(t) >= stops_per_driver for t in tours) and unassigned:
-            # kies de driver met kortste huidige tour lengte
-            lengths = [tour_length_with_depot(t) for t in tours]
-            d = min(range(num_drivers), key=lambda k: lengths[k])
-            j = nearest_unassigned(current[d], unassigned)
-            tours[d].append(j)
-            unassigned.remove(j)
-            current[d] = j
+while unassigned:
+    # alleen drivers met plek (harde cap)
+    candidates = [d for d in range(NUM_DRIVERS) if len(tours[d]) < STOPS_PER_DRIVER]
+    if not candidates:
+        # zou nooit mogen gebeuren dankzij sanity check hierboven
+        raise RuntimeError("Geen kandidaten meer maar er zijn nog unassigned stops. Check je data.")
+    # pak driver met de kortste huidige route
+    d = min(candidates, key=lambda k: tour_lengths[k])
 
-    return tours
+    # kies voor deze driver de stop met minimale marginale Δ
+    best_j = None
+    best_delta = float("inf")
+    for j in unassigned:
+        delta = marginal_append_cost(current_end[d], len(tours[d]) == 0, j)
+        if delta < best_delta:
+            best_delta = delta
+            best_j = j
 
-# ==============================
-# 2-opt (metaheuristic glow-up)
-# ==============================
-def two_opt_once(path: List[int]) -> Tuple[List[int], float, bool]:
-    """
-    Eén beste 2-opt verbetering op path (zonder depot in de lijst).
-    Return: (nieuwe_path, delta, improved?)
-    """
+    # log old -> new
+    old_len = tour_lengths[d]
+
+    # append stop
+    tours[d].append(best_j)
+    unassigned.remove(best_j)
+
+    # update lengte
+    if len(tours[d]) == 1:
+        # 0->j->0
+        tour_lengths[d] = distance_matrix[(DEPOT, best_j)] + distance_matrix[(best_j, DEPOT)]
+    else:
+        end = current_end[d]
+        tour_lengths[d] = tour_lengths[d] - distance_matrix[(end, DEPOT)] \
+                          + distance_matrix[(end, best_j)] + distance_matrix[(best_j, DEPOT)]
+    current_end[d] = best_j
+
+    new_len = tour_lengths[d]
+    assignment_log.append((step, d+1, best_j, old_len, best_delta, new_len))
+    if VERBOSE:
+        print(f"Step {step:3d} | Driver {d+1} krijgt stop {best_j} | {old_len:.4f} -> {new_len:.4f}  (Δ = {best_delta:.4f})")
+    step += 1
+
+# Eindoverzicht tours + checks
+print("\n=== Tours (exact 30 per driver) ===")
+for d in range(NUM_DRIVERS):
+    print(f"Tour {d+1} (n={len(tours[d])}):", tours[d])
+
+# Definitieve lengtes opnieuw uitrekenen (zekerheid)
+tour_lengths = [tour_length_with_depot(t) for t in tours]
+print("\n=== Lengtes per tour (incl. depot->...->depot) ===")
+for d, L in enumerate(tour_lengths, start=1):
+    print(f"Tour {d} lengte: {L:.4f}")
+
+# Bonus: fairness stats
+total = sum(tour_lengths)
+mx = max(tour_lengths)
+mn = min(tour_lengths)
+print(f"\nTotal: {total:.4f} | Max: {mx:.4f} | Min: {mn:.4f} | Spread: {mx - mn:.4f}")
+
+# ===== (Optioneel) 2-opt per tour =====
+USE_TWO_OPT = False
+
+def two_opt_once(path):
     n = len(path)
     if n < 4:
         return path, 0.0, False
-
-    best_delta = 0.0
+    best_gain = 0.0
     best_i, best_k = -1, -1
-
-    # werk met full tour incl. depot edges voor delta
-    def segment_len(a, b):  # lengte edge a->b in full (met depot waar nodig)
-        return distance_matrix[a][b]
-
-    # indices over de 'full tour' [DEPOT] + path + [DEPOT]
-    full = [DEPOT_INDEX] + path + [DEPOT_INDEX]
-
-    # 2-opt swap breekt (i,i+1) en (k,k+1), 0<=i<k< n (in path-index)
+    full = [DEPOT] + path + [DEPOT]
+    def w(a, b): return distance_matrix[(a, b)]
     for i in range(n - 2):
-        a, b = full[i], full[i + 1]               # edge a->b
+        a, b = full[i], full[i+1]
         for k in range(i + 2, n):
-            c, d = full[k], full[k + 1]           # edge c->d
-            # skip triviale aansluitende edges die de tour openbreken
+            c, d = full[k], full[k+1]
             if b == c or d == a:
                 continue
-            old = segment_len(a, b) + segment_len(c, d)
-            new = segment_len(a, c) + segment_len(b, d)
-            delta = old - new
-            if delta > best_delta + 1e-12:
-                best_delta = delta
+            old = w(a, b) + w(c, d)
+            new = w(a, c) + w(b, d)
+            gain = old - new
+            if gain > best_gain + 1e-12:
+                best_gain = gain
                 best_i, best_k = i, k
-
-    if best_delta > 1e-12:
-        # reverse segment path[i: k] (in path-index)
+    if best_gain > 1e-12:
         new_path = path[:best_i] + path[best_i:best_k][::-1] + path[best_k:]
-        return new_path, best_delta, True
-
+        return new_path, best_gain, True
     return path, 0.0, False
 
-def two_opt_improve(path: List[int], max_iters: int = 10_000) -> Tuple[List[int], float]:
-    """Itereer 2-opt tot geen verbetering. Return (best_path, gained_length)."""
-    total_gain = 0.0
-    iters = 0
-    while iters < max_iters:
-        path, gain, improved = two_opt_once(path)
-        if not improved:
+def two_opt(path, max_iters=10_000):
+    total = 0.0
+    it = 0
+    while it < max_iters:
+        path, gain, ok = two_opt_once(path)
+        if not ok:
             break
-        total_gain += gain
-        iters += 1
-    return path, total_gain
+        total += gain
+        it += 1
+    return path, total
 
-# ==============================
-# Run
-# ==============================
-if __name__ == "__main__":
-    # 1) bouw greedy tours (zelfde outputstructuur/namen als jouw code)
-    tours: List[List[int]] = build_greedy_tours(NUM_DRIVERS, STOPS_PER_DRIVER)
-
-    # 2) print greedy resultaat
-    print("=== Greedy resultaat ===")
-    for d, tour in enumerate(tours, start=1):
-        print(f"Tour {d}:", tour)
-
-    tour_lengths_before = [tour_length_with_depot(t) for t in tours]
-    for d, L in enumerate(tour_lengths_before, start=1):
-        print(f"Tour {d} lengte (voor 2-opt): {L:.4f}")
-
-    # 3) 2-opt per driver (metaheuristic sauce)
-    improved_tours = []
-    gains = []
-    for t in tours:
-        t2, gain = two_opt_improve(t)
-        improved_tours.append(t2)
-        gains.append(gain)
-
-    print("\n=== Na 2-opt per tour ===")
-    for d, (old, new, gain) in enumerate(zip(tours, improved_tours, gains), start=1):
-        print(f"Tour {d} (gain {gain:.4f}):")
-        print("  voor:", old)
-        print("  na  :", new)
-
-    tour_lengths_after = [tour_length_with_depot(t) for t in improved_tours]
-    for d, (L0, L1) in enumerate(zip(tour_lengths_before, tour_lengths_after), start=1):
-        print(f"Tour {d} lengte: {L0:.4f} -> {L1:.4f}  (Δ = {L0 - L1:.4f})")
-
-    # Als je toch exact jouw oude variabelen wilt houden:
-    # - 'tours' is nog steeds de list-of-lists met stops per driver
-    # - 'tour_lengths' kun je zo bepalen:
-    tour_lengths = tour_lengths_after
+if USE_TWO_OPT:
+    print("\n=== 2-opt ===")
+    improved = []
+    for d, t in enumerate(tours, start=1):
+        L0 = tour_length_with_depot(t)
+        t2, gain = two_opt(t)
+        L1 = tour_length_with_depot(t2)
+        improved.append(t2)
+        print(f"Driver {d}: {L0:.4f} -> {L1:.4f}  (Δ = {L0 - L1:.4f}, 2-opt winst = {gain:.4f})")
+    tours = improved
+    tour_lengths = [tour_length_with_depot(t) for t in tours]
+    print("\nNa 2-opt lengtes:")
+    for d, L in enumerate(tour_lengths, start=1):
+        print(f"Tour {d} lengte: {L:.4f}")

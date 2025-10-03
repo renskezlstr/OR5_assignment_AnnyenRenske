@@ -18,13 +18,12 @@ for i in range(NUM_LOCATIONS):
         dy = coordinates[i][1] - coordinates[j][1]
         distance_matrix[(i, j)] = (dx*dx + dy*dy) ** 0.5
 
-
-
-        
+      
 NUM_DRIVERS = 4
 # we gaan ervan uit dat iedere driver max 30 stops krijgt,
 # zodat dat eerlijk verdeeld is
-STOPS_PER_DRIVER = 30
+STOPS_PER_DRIVER = 30 
+#dit kunnen we aanpassen als we willen, zodat de verdeling ander is en er een derde research question van gemaakt kan worden
 unassigned = set(range(1, NUM_LOCATIONS)) 
 tours = [[] for _ in range(NUM_DRIVERS)]
 current = [0] * NUM_DRIVERS  
