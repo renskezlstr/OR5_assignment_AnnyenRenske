@@ -22,14 +22,13 @@ for i in range(NUM_LOCATIONS):
 NUM_DRIVERS = 4
 STOPS_PER_DRIVER = None   # <-- geen limiet; zet op een int als je wél een cap wilt
 DEPOT = 0
-VERBOSE = True            # logging aan/uit
 
 # ===== Helpers =====
 def tour_length_with_depot(tour):
     """Lengte inclusief 0 -> ... -> 0"""
     if not tour:
         return 0.0
-    full = [DEPOT] + tour + [DEPOT]
+    full = [DEPOT] + tour 
     L = 0.0
     for i in range(len(full) - 1):
         L += distance_matrix[(full[i], full[i+1])]
@@ -68,7 +67,7 @@ while unassigned:
     # pak driver met de kortste huidige route
     d = min(candidates, key=lambda k: tour_lengths[k])
 
-    # kies voor deze driver de stop met minimale marginale Δ
+    # kies voor deze driver de stop met minimale marginale delta kosten 
     best_j = None
     best_delta = float("inf")
     for j in unassigned:
@@ -76,8 +75,8 @@ while unassigned:
         if delta < best_delta:
             best_delta = delta
             best_j = j
-
-    # append stop
+            
+    # append stop 
     tours[d].append(best_j)
     unassigned.remove(best_j)
 
@@ -91,15 +90,16 @@ while unassigned:
                           + distance_matrix[(end, best_j)] + distance_matrix[(best_j, DEPOT)]
     current_end[d] = best_j
 
-    assignment_log.append((step, d+1, best_j, best_delta, tour_lengths[d]))
-    if VERBOSE:
-        print(f"Step {step:3d} | Driver {d+1} krijgt stop {best_j} | Δ = {best_delta:.4f} | nieuwe lengte = {tour_lengths[d]:.4f}")
-    step += 1
 
 # Eindoverzicht tours
 print("\n=== Tours ===")
 for d in range(NUM_DRIVERS):
     print(f"Tour {d+1}:", tours[d])
+
+# Aantal stops per driver
+print("\n=== Aantal stops per driver ===")
+for d, t in enumerate(tours, start=1):
+    print(f"Driver {d}: {len(t)} stops")
 
 # Definitieve lengtes opnieuw uitrekenen (zekerheid)
 tour_lengths = [tour_length_with_depot(t) for t in tours]
