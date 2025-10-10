@@ -22,7 +22,7 @@ for i in range(NUM_LOCATIONS):
 NUM_DRIVERS = 4
 # we gaan ervan uit dat iedere driver max 30 stops krijgt,
 # zodat dat eerlijk verdeeld is
-STOPS_PER_DRIVER = len(NUM_LOCATIONS)/NUM_DRIVERS 
+STOPS_PER_DRIVER = 30 
 #dit kunnen we aanpassen als we willen, zodat de verdeling ander is en er een derde research question van gemaakt kan worden
 unassigned = set(range(1, NUM_LOCATIONS)) 
 tours = [[] for _ in range(NUM_DRIVERS)]
