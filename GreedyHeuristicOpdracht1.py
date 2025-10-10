@@ -17,10 +17,10 @@ for i in range(NUM_LOCATIONS):
         dx = coordinates[i][0] - coordinates[j][0]
         dy = coordinates[i][1] - coordinates[j][1]
         distance_matrix[(i, j)] = (dx*dx + dy*dy) ** 0.5
-
       
 NUM_DRIVERS = 4
 # we gaan ervan uit dat iedere driver max 30 stops krijgt,
+
 # zodat dat eerlijk verdeeld is
 STOPS_PER_DRIVER = len(NUM_LOCATIONS)/NUM_DRIVERS 
 #dit kunnen we aanpassen als we willen, zodat de verdeling ander is en er een derde research question van gemaakt kan worden
