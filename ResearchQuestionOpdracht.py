@@ -21,3 +21,5 @@ for i in range(NUM_LOCATIONS):
         dx = coordinates[i][0] - coordinates[j][0]
         dy = coordinates[i][1] - coordinates[j][1]
         distance_matrix[(i, j)] = math.hypot(dx, dy)
+        
+#stap 4:   

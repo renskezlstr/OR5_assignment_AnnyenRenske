@@ -166,3 +166,31 @@ if USE_TWO_OPT:
     print("\nNa 2-opt lengtes:")
     for d, L in enumerate(tour_lengths, start=1):
         print(f"Tour {d} lengte: {L:.4f}")
+
+
+# Plotting
+import matplotlib.pyplot as plt
+
+# ===== Plotten van alle tours =====
+plt.figure(figsize=(8, 6))
+
+# Plot alle routes per chauffeur
+for d, t in enumerate(tours, start=1):
+    if not t:
+        continue
+    # X en Y van deze tour
+    x_coords = [coordinates[i][0] for i in ([DEPOT] + t )]
+    y_coords = [coordinates[i][1] for i in ([DEPOT] + t )]
+
+    plt.plot(x_coords, y_coords, marker='o', label=f"Driver {d}")
+
+# Plot het depot apart (groen)
+plt.scatter(coordinates[DEPOT][0], coordinates[DEPOT][1],
+            s=120, color='hotpink', marker='s', label='Depot')
+
+plt.title("Routes per chauffeur (Greedy Fair)")
+plt.xlabel("X-coördinaat")
+plt.ylabel("Y-coördinaat")
+plt.legend()
+plt.grid(True)
+plt.show()
