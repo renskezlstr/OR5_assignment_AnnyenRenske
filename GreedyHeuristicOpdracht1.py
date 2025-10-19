@@ -17,7 +17,7 @@ for i in range(NUM_LOCATIONS):
     for j in range(NUM_LOCATIONS):
         dx = coordinates[i][0] - coordinates[j][0]
         dy = coordinates[i][1] - coordinates[j][1]
-        distance_matrix[(i, j)] = (dx*dx + dy*dy) ** 0.5
+        distance_matrix[(i, j)] = abs(dx) + abs(dy) #Manhattan Distance 
       
 NUM_DRIVERS = 4
 # we gaan ervan uit dat iedere driver max 30 stops krijgt,
@@ -65,7 +65,7 @@ colors = plt.cm.tab10.colors
 for d, tour in enumerate(tours):
     if not tour:
         continue
-    path = [depot] + tour + [depot]  # sluit de route naar het depot
+    path = [depot] + tour   # sluit de route naar het depot
     xs = coords[path, 0]
     ys = coords[path, 1]
 
