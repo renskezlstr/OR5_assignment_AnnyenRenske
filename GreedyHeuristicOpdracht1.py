@@ -8,10 +8,7 @@ import matplotlib.pyplot as plt
 # excel inlezen
 df = pd.read_excel("newspaper problem instance.xlsx")
 # lijst met coördinaten maken
-coordinates = []
-for i in range(len(df)):
-    coordinates.append((df.iloc[i]["xcoord"], df.iloc[i]["ycoord"]))
-
+coordinates = np.array([(df.iloc[i]["xcoord"], df.iloc[i]["ycoord"]) for i in range(len(df))])
 NUM_LOCATIONS = len(coordinates) 
 
 # afstandsmatrix bouwen zelfde als in voorbeeld van les 1
@@ -81,3 +78,4 @@ plt.ylabel("y-coordinaat")
 plt.legend()
 plt.grid(True, linestyle=":", alpha=0.2)
 plt.show()
+
