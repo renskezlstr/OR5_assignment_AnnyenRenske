@@ -23,7 +23,7 @@ NUM_DRIVERS = 4
 # we gaan ervan uit dat iedere driver max 30 stops krijgt,
 
 # zodat dat eerlijk verdeeld is
-STOPS_PER_DRIVER = len(NUM_LOCATIONS)/NUM_DRIVERS 
+STOPS_PER_DRIVER = 30
 #dit kunnen we aanpassen als we willen, zodat de verdeling ander is en er een derde research question van gemaakt kan worden
 unassigned = set(range(1, NUM_LOCATIONS)) 
 tours = [[] for _ in range(NUM_DRIVERS)]
@@ -57,25 +57,30 @@ for tour in tours:
 for d, L in enumerate(tour_lengths, start=1):
     print(f"Tour {d} lengte: {L} km")
 
+# Visualisaltion
+coords = np.array(coordinates)  # maak 'm indexeerbaar met [:, 0]
+plt.figure(figsize=(8, 6))
 colors = plt.cm.tab10.colors
+
 for d, tour in enumerate(tours):
     if not tour:
         continue
-    path = [depot] + tour
-    plt.plot(coordinates[path, 0], coordinates[path, 1],
-             color=colors[d % len(colors)], linewidth=2.5, label=f"Driver {d+1}")
-    plt.scatter(coordinates[tour, 0], coordinates[tour, 1],
-                s=60, color=colors[d % len(colors)], edgecolors="black")
+    path = [depot] + tour + [depot]  # sluit de route naar het depot
+    xs = coords[path, 0]
+    ys = coords[path, 1]
 
+    # lijn + stops van deze driver
+    plt.plot(xs, ys, linewidth=2.0, color=colors[d % len(colors)], label=f"Driver {d+1}")
+    plt.scatter(coords[tour, 0], coords[tour, 1], s=60,
+                color=colors[d % len(colors)], edgecolors="black")
 
-# Visualisaltion
-plt.figure(figsize=(10, 8))
-plt.scatter(coordinates[:, 0], coordinates[:, 1], c="gray", s=40, label="Stops")
-plt.scatter(coordinates[0, 0], coordinates[0, 1], c="red", s=100, marker="s", label="Depot")
-plt.title("Newspaper Delivery Routes (zonder terug naar depot)")
-plt.xlabel("x-coordinaat")
-plt.ylabel("y-coordinaat")
+# depot apart
+plt.scatter(coords[depot, 0], coords[depot, 1], s=120, color='hotpink', marker='s', label='Depot')
+
+plt.title("Routes per chauffeur (Greedy)")
+plt.xlabel("X-coördinaat")
+plt.ylabel("Y-coördinaat")
 plt.legend()
-plt.grid(True, linestyle=":", alpha=0.2)
+plt.grid(True)
 plt.show()
 
