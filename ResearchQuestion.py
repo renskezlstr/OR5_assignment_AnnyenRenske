@@ -194,3 +194,104 @@ plt.ylabel("Y-coördinaat")
 plt.legend()
 plt.grid(True)
 plt.show()
+
+
+
+
+
+
+
+
+
+2. 
+
+import pandas as pd
+import math
+import numpy as np
+
+# stap 1: data inlezen
+df = pd.read_excel('newspaper problem instance.xlsx')
+
+#stap 2: coördinaten inlezen en deze in een tuple zetten
+# hierdoor kunnen we later makkelijk de afstand tussen twee punten berekenen
+coordinates = []
+for i in range(len(df)):
+    coordinates.append((df.iloc[i]['xcoord'], df.iloc[i]['ycoord']))
+
+NUM_LOCATIONS = len(coordinates)
+
+#stap 3: afstandsmatrix maken
+distance_matrix = {}
+for i in range(NUM_LOCATIONS):
+    for j in range(NUM_LOCATIONS):
+        dx = coordinates[i][0] - coordinates[j][0]
+        dy = coordinates[i][1] - coordinates[j][1]
+        distance_matrix[(i, j)] = math.hypot(dx, dy)
+        
+# Stap 4: Configuratie van het probleem (basisinstellingen voor de oplossing)
+NUM_DRIVERS = 4
+STOPS_PER_DRIVER = None  
+DEPOT = 0
+
+
+#Stap 5:De totale afstand van depot naar stops berekenen zonder terug naar het depot
+def tour_length_with_depot(tour):
+    """Totale afstand van depot -> stops """
+    if not tour:
+        return 0.0
+    full = [DEPOT] + tour 
+    return sum(distance_matrix[(full[i], full[i+1])] for i in range(len(full) - 1))
+
+#stap 6: De marginale kosten berekenen als we een stop toevoegen aan het einde van een tour
+def marginal_append_cost(current_end, tour_is_empty, j):
+    return (distance_matrix[(DEPOT, j)] + distance_matrix[(j, DEPOT)]
+            if tour_is_empty else
+            distance_matrix[(current_end, j)] + distance_matrix[(j, DEPOT)] - distance_matrix[(current_end, DEPOT)])
+
+#stap 7: Voorbereiding van de Greedy-toewijzing zonder vaste 30 stops per driver
+unassigned = set(range(1, NUM_LOCATIONS))  # alles behalve depot
+tours = [[] for _ in range(NUM_DRIVERS)]
+current_end = [DEPOT] * NUM_DRIVERS
+tour_lengths = [0.0] * NUM_DRIVERS  # actuele lengte incl. terug naar depot
+step = 1
+assignment_log = []  # (step, driver, stop, delta, new_length)
+
+#stap 8: Selecteer de chauffeur met de kortste route 
+while unassigned:
+    # kies kandidaten
+    """ Als STOPS_PER_DRIVER = None, dan is er geen limiet, dus alle chauffeurs zijn kandidaten.
+    Als er wel een limiet is, 
+    dan worden alleen die chauffeurs gekozen die nog niet aan hun maximum zitten."""
+    if STOPS_PER_DRIVER is None:
+        candidates = list(range(NUM_DRIVERS))
+    else:
+        candidates = [d for d in range(NUM_DRIVERS) if len(tours[d]) < STOPS_PER_DRIVER]
+        if not candidates:
+            candidates = list(range(NUM_DRIVERS))  
+
+    # pak driver met de kortste huidige route
+    d = min(candidates, key=lambda k: tour_lengths[k])
+    # kies voor deze driver de stop met minimale marginale Δ
+    best_j = None
+    best_delta = float("inf")
+    for j in unassigned:
+        delta = marginal_append_cost(current_end[d], len(tours[d]) == 0, j)
+        if delta < best_delta:
+            best_delta = delta
+            best_j = j
+
+    # append stop
+    tours[d].append(best_j)
+    unassigned.remove(best_j)
+
+    # update lengte
+    if len(tours[d]) == 1:
+        # 0->j->0
+        tour_lengths[d] = distance_matrix[(DEPOT, best_j)] + distance_matrix[(best_j, DEPOT)]
+    else:
+        end = current_end[d]
+        tour_lengths[d] = tour_lengths[d] - distance_matrix[(end, DEPOT)] \
+                          + distance_matrix[(end, best_j)] + distance_matrix[(best_j, DEPOT)]
+    current_end[d] = best_j
+
+
