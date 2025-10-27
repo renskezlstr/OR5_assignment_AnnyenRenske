@@ -55,9 +55,9 @@ for d, tour in enumerate(tours, start=1):
 for d, T in enumerate(tour_times, start=1):
     print(f"Tour {d} lengte: {T} time units")
 
-# ===== Visualisatie (zelfde stijl) =====
-plt.figure(figsize=(8, 6))                          # maak plot aan
-colors = plt.cm.tab10.colors                        # gebruik standaard kleurenpalet
+# *******Visualisatie*******
+plt.figure(figsize=(8, 6))                          
+colors = ["#069AF3", "#F57BC7", "#8C000F", "#00FF00"]
 coords = coordinates                                # kortere naam
 
 for d, tour in enumerate(tours):                    # plot elke chauffeur
