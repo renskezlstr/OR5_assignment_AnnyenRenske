@@ -81,142 +81,147 @@ plt.tight_layout()                                  # netjes positioneren
 plt.show()                                          # toon de grafiek
 
 
-# === Metaheuristiek (open routes) – 2-opt + swap + Simulated Annealing ===
+# *******Metaheuristiek – 2-opt + swap + Simulated Annealing*******
 
-import random, math             # random = toevalspakketje, math = rekenknoppen
-import numpy as np              # numpy = handige lijstjes met getallen
-import matplotlib.pyplot as plt # plt = ding om plaatjes/plots te maken
+import random, math             
+import numpy as np              
+import matplotlib.pyplot as plt 
 
-# ---- tour_len: reken hoeveel tijd één route kost (we gaan NIET terug naar depot)
+# *******tour_len: reken hoeveel tijd één route kost*******
 def tour_len(t):
     if not t:                   # als de route leeg is (niemand bezoeken)
-        return 0                # kost het letterlijk 0 tijd, duh
-    s = distance_matrix[(depot, t[0])]      # start: depot → eerste klant
+        return 0                # kost het  0 tijd
+    s = distance_matrix[(depot, t[0])]      # start: depot naar de eerste klant
     s += sum(                                  # + alles tussen klanten optellen
-        distance_matrix[(t[i], t[i+1])]        # stukje van klant i → klant i+1
-        for i in range(len(t)-1)               # dat doen we voor alle i's
+        distance_matrix[(t[i], t[i+1])]        # stukje van klant i naar klant i+1
+        for i in range(len(t)-1)               # dat doen voor elke i
     )
-    return s                   # klaar, dit is de tijd van deze route
+    return s                   
 
-# ---- two_opt: maak de volgorde in één route slimmer (stukje omdraaien als dat korter is)
+#*******two_opt: maak de volgorde in één route slimmer (stukje omdraaien als dat korter is)*******
 def two_opt(t):
     n = len(t)                 # hoeveel stops zitten er in de route?
-    if n < 4:                  # minder dan 4? dan valt er niks zinnigs te flippen
-        return t               # laat maar, teruggeven en door
-    improved = True            # vlaggetje: we proberen te verbeteren totdat het niet meer kan
-    while improved:            # blijf loopen zolang we winst vinden
-        improved = False       # reset: we hebben nog geen nieuwe winst gevonden
+    if n < 4:                  # minder dan 4? dan kan 2-opt niks verbeteren
+        return t               # teruggeven zoals-ie is
+    improved = True            # proberen te verbeteren totdat het niet meer kan
+    while improved:            # blijf loopen zolang er winst te vinden is
+        improved = False       # reset: er is nog geen nieuwe winst gevonden
         best_gain = 0          # beste winst tot nu toe = 0 (niks)
-        best_i = best_k = None # waar we moeten knippen? nog niet bekend
-        for i in range(n-1):   # eerste knip-plek proberen
-            prev = depot if i == 0 else t[i-1]   # wat zit vóór i? aan het begin is dat het depot
-            for k in range(i+1, n):              # tweede knip-plek proberen
+        best_i = best_k = None # waar we moeten stoppen? is nog niet bekend
+        for i in range(n-1):   # eerste stop-plek proberen
+            prev = depot if i == 0 else t[i-1]   # wat zit voor i? aan het begin is dat het depot
+            for k in range(i+1, n):              # tweede stop-plek proberen
                 nxt = t[k+1] if k+1 < n else None  # wat zit na k? niets als k het einde is
                 # oud = wat het nu kost rondom het stukje (prev→i en k→nxt)
                 old = distance_matrix[(prev, t[i])] + (distance_matrix[(t[k], nxt)] if nxt else 0)
                 # nieuw = wat het kost als we het stukje i..k omdraaien (prev→k en i→nxt)
                 new = distance_matrix[(prev, t[k])] + (distance_matrix[(t[i], nxt)] if nxt else 0)
-                gain = old - new                 # positieve gain = korter = yay
+                gain = old - new                 # positieve gain = korter 
                 if gain > best_gain:            # is dit de beste tot nu toe?
                     best_gain, best_i, best_k = gain, i, k  # onthouden
         if best_gain > 0:                       # hebben we winst gevonden?
-            # dan draaien we dat stukje om. letterlijk list magic:
+            # dan draaien we dat stukje om:
             t = t[:best_i] + list(reversed(t[best_i:best_k+1])) + t[best_k+1:]
-            improved = True                     # we hebben verbeterd → nog een rondje proberen
+            improved = True                     # we hebben verbeterd, dus nog een rondje proberen
     return t                                     # klaar, dit is de betere route
 
-# ---- try_swap: ruil één klant tussen twee routes als dat helpt
+# *******try_swap: ruil één klant tussen twee routes als dat helpt*******
 def try_swap(routes, d1, d2, i1, i2):
-    if d1 == d2:                 # zelfde route ruilen is… raar. doen we niet.
-        return None              # None = laat maar zitten
-    if not routes[d1] or not routes[d2]:   # als één route leeg is: ook niet handig
+    if d1 == d2:                 # zelfde route ruilen is niet de bedoeling, dus doen we niet.
+        return None              # None = geen verbetering
+    if not routes[d1] or not routes[d2]:   # als één route leeg is, niks doen
         return None
     r1, r2 = routes[d1], routes[d2]        # pak de twee routes
     new1, new2 = r1[:], r2[:]              # maak kopieën (origineel niet kapot maken)
     new1[i1], new2[i2] = r2[i2], r1[i1]    # swap de twee gekozen klanten
-    old = tour_len(r1) + tour_len(r2)      # tijd vóór swap
-    new = tour_len(new1) + tour_len(new2)  # tijd ná swap
-    if new < old:                          # beter? love that for us
+    old = tour_len(r1) + tour_len(r2)      # tijd voor swap
+    new = tour_len(new1) + tour_len(new2)  # tijd na swap
+    if new < old:                          # beter? 
         out = [r[:] for r in routes]       # kopie van alle routes
         out[d1], out[d2] = new1, new2      # vervang de twee aangepaste routes
         return out                         # geef die nieuwe set terug
-    return None                            # niet beter → doe maar niks
+    return None                            # niet beter dus niks doen
 
-# ---- sa: Simulated Annealing = soms ook slechte moves toestaan om uit local trap te komen
+# *******sa: Simulated Annealing = soms ook slechte routes toestaan om uit local trap te komen*******
 def sa(open_tours, T=400.0, Tend=1.0, alpha=0.995, iters=200, seed=42):
-    import random, math
-    random.seed(seed)
+    import random, math              # we gebruiken toeval (random) en (math) dus welke methode gaan we gebruiken
+    random.seed(seed)                # zet de “dobbelsteen” vast (voor reproduceerbaarheid)
+    # start: maak eerst elke route lokaal beter met 2-opt 
+    cur = [two_opt(r[:]) for r in open_tours]   # kopieer elke route en 2-opt het
+    best = [r[:] for r in cur]                  # “best tot nu toe” = wat we nu hebben
+    best_total = sum(tour_len(r) for r in cur)  # totale tijd van “best” uitrekenen
 
-    # start = maak elke route eerst wat slimmer
-    cur = [two_opt(r[:]) for r in open_tours]
-    best = [r[:] for r in cur]
-    best_total = sum(tour_len(r) for r in cur)
-
-    while T > Tend:                          # afkoelen
-        for _ in range(iters):               # een paar pogingen per temperatuur
-            # kies 2 routes en 2 posities
+    while T > Tend:                   # zolang de temperatuur nog boven de eind-temp is (we zijn nog “los”)
+        for _ in range(iters):        # doe een aantal pogingen (swaps) op deze temperatuur
+            # kies 2 willekeurige verschillende routes
             d1, d2 = random.sample(range(len(cur)), 2)
-            if not cur[d1] or not cur[d2]:   # lege route? skip
+            if not cur[d1] or not cur[d2]:   # als een van die routes leeg is: skip (niks te ruilen)
                 continue
+            # kies in elke route een willekeurige klantpositie
             i1 = random.randrange(len(cur[d1]))
             i2 = random.randrange(len(cur[d2]))
 
-            # buur-oplossing = zelfde als nu maar met één swap
-            new = [r[:] for r in cur]
-            new[d1][i1], new[d2][i2] = new[d2][i2], new[d1][i1]
+            # maak een buur-oplossing: kopieer de huidige routes en ruil precies die twee klanten
+            new = [r[:] for r in cur]                 # diepe kopie (zodat we cur niet verpesten)
+            new[d1][i1], new[d2][i2] = new[d2][i2], new[d1][i1]  # daadwerkelijke swap
 
-            # simpele delta: herbereken totale kost (lekker dom, maar duidelijk)
-            cur_total = sum(tour_len(r) for r in cur)
-            new_total = sum(tour_len(r) for r in new)
-            delta = new_total - cur_total
+            # reken domweg de totale tijd uit voor en na de swap (simpel > snel)
+            cur_total = sum(tour_len(r) for r in cur)  # hoe lang is het nu?
+            new_total = sum(tour_len(r) for r in new)  # hoe lang is het na de swap?
+            delta = new_total - cur_total              # positief = slechter, negatief = beter
 
-            # SA-regel: accepteer als beter, of soms ook slechter met kans exp(-delta/T)
+            # Simulated Annealing-regel:
+            # als beter (delta < 0): altijd accepteren
+            # als slechter: soms toch accepteren met kans exp(-delta / T)
             if delta < 0 or random.random() < math.exp(-delta / T):
-                cur = new
-                # klein poetsrondje: 2-opt alleen op de twee aangeraakte routes
+                cur = new                              # accepteer de buur-oplossing
+                # verbeter alleen de twee aangepaste routes met 2-opt
                 cur[d1] = two_opt(cur[d1])
                 cur[d2] = two_opt(cur[d2])
 
+                # update “best” als het geheel nu echt korter is dan wat we ooit hadden
                 cur_total = sum(tour_len(r) for r in cur)
                 if cur_total < best_total:
                     best, best_total = [r[:] for r in cur], cur_total
 
-        T *= alpha                           # koel verder af
-    return best                              # beste set routes
+        T *= alpha                         # afkoelfactor na elke ronde doen we T = T * alpha  langzaam afkoelen
+        """
+        Hoge temperatuur = veel experimenteren, kan ook slechtere dingen proberen
+        Lage temperatuur = alleen nog kleine verbeteringen, focust op fine-tunen
+        dus: hoe kouder → hoe strenger → het pakt minder snel slechtere routes,
+        maar daardoor niet automatisch betere routes, want het durft minder te experimenteren."""
+    return best                            
 
-# ---- run: start met jullie greedy tours en optimaliseer
-tours0 = [r[:] for r in tours]     # kopie van de input (we slopen het origineel niet)
-best_tours = sa(tours0)            # draai het SA-circus en krijg betere routes
+# *******run: start met greedy tours en optimaliseer*******
+tours0 = [r[:] for r in tours]     # kopie van de input zodat de originele routes bewaard blijven
+best_tours = sa(tours0)            # run de SA en krijg betere routes
 
-# ---- print per route de tijd (we doen GEEN totaalprint, wilde je niet)
-print("\n== RESULTATEN (open routes) ==")  # gewoon een kopje, voor de vibes
+# *******print per route de tijd*******
+print("\n== RESULTATEN (open routes) ==")  
 for d, t in enumerate(best_tours, 1):      # loop door alle routes
     print(f"Route {d}: {t} | tijd: {tour_len(t):.1f} time units")  # route + tijd
 
-# ---- vergelijk oud vs nieuw, per route, in simpele mensentaal
-print("\n== Verschil oud vs nieuw per route ==")  # nog een kopje (dramatisch effect)
+# *******vergelijk oud vs nieuw, per route*******
+print("\n== Verschil oud vs nieuw per route ==")  
 for d, (old_t, new_t) in enumerate(zip(tours, best_tours), 1):  # pak oude en nieuwe naast elkaar
     diff = tour_len(old_t) - tour_len(new_t)        # positief = nieuw is sneller (korter)
-    tag = 'korter' if diff > 0 else ('langer' if diff < 0 else 'gelijk')  # woorden zijn leuk
+    tag = 'korter' if diff > 0 else ('langer' if diff < 0 else 'gelijk')  
     print(f"Het verschil van oud en nieuw in route {d} is {diff:.1f} time units ({tag}).")
 
-# ---- plot: teken alleen de nieuwe (open) routes, zodat je ook iets moois ziet
+# *******plot: teken alleen de nieuwe (open) routes*******
 coords = np.array(coordinates)         # lijst met (x,y) van depot en klanten
-try:
-    palette = colors                   # als jullie al kleuren hadden: gebruik die
-except NameError:
-    palette = plt.cm.tab10.colors      # anders pak ik standaard kleurtjes
+palette = colors
 
-plt.figure(figsize=(8,6))              # maak een plaatje van 8x6 inch
+plt.figure(figsize=(8,6))              # maak een plaatje van 8x6 
 for d, t in enumerate(best_tours):     # voor elke route:
-    if not t:                          # lege route? skip, boring
+    if not t:                          # lege route? skip
         continue
-    path = [depot] + t                 # open route: we starten wel bij depot
+    path = [depot] + t                 # open route:  starten bij depot
     xs, ys = coords[path,0], coords[path,1]  # pak de x-jes en y-tjes
     plt.plot(xs, ys, linewidth=2.0, color=palette[d % len(palette)], label=f"Driver {d+1}")  # lijn tekenen
     plt.scatter(coords[t,0], coords[t,1], s=60, color=palette[d % len(palette)], edgecolors="black")  # puntjes
 
 plt.scatter(coords[depot,0], coords[depot,1], s=120, color='hotpink', marker='s', label='Depot')  # depot = roze vierkant
-plt.title("Routes per chauffeur (open)")  # titel, want we zijn netjes opgevoed
-plt.xlabel("X"); plt.ylabel("Y")          # as-jes met naam
-plt.legend(); plt.grid(True); plt.tight_layout(); plt.show()  # legenda, raster, en laten zien
+plt.title("Routes per chauffeur (open)")  
+plt.xlabel("X"); plt.ylabel("Y")          
+plt.legend(); plt.grid(True); plt.tight_layout(); plt.show() 
