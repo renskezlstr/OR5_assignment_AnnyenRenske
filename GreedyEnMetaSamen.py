@@ -105,6 +105,7 @@ def tour_length(tour):
 def total_length(tours_):
     return sum(tour_length(t) for t in tours_)
 
+
 # -----------------------------
 # 2-opt (best improvement) voor OPEN routes
 # -----------------------------
