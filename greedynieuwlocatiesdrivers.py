@@ -166,8 +166,8 @@ def sa(open_tours, T=400.0, Tend=1.0, alpha=0.995, iters=200, seed=42):
             new[d1][i1], new[d2][i2] = new[d2][i2], new[d1][i1]  # daadwerkelijke swap
 
             # reken domweg de totale tijd uit voor en na de swap (simpel > snel)
-            cur_total = sum(tour_len(r) for r in cur)  # hoe lang is het nu?
-            new_total = sum(tour_len(r) for r in new)  # hoe lang is het na de swap?
+            cur_total = max(tour_len(r) for r in cur)  # bereken de tijd van de langste route (laatste bezorger klaar)
+            new_total = max(tour_len(r) for r in new)  # nieuwe totale eindtijd (langste route) na een swap
             delta = new_total - cur_total              # positief = slechter, negatief = beter
 
             # Simulated Annealing-regel:
