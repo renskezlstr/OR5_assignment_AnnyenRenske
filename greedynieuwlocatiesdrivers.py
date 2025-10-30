@@ -149,7 +149,7 @@ def sa(open_tours, T=400.0, Tend=1.0, alpha=0.995, iters=200, seed=42):
     # start: maak eerst elke route lokaal beter met 2-opt 
     cur = [two_opt(r[:]) for r in open_tours]   # kopieer elke route en 2-opt het
     best = [r[:] for r in cur]                  # “best tot nu toe” = wat we nu hebben
-    best_total = sum(tour_len(r) for r in cur)  # totale tijd van “best” uitrekenen
+    best_max = max(tour_len(r) for r in cur)  # totale tijd van “best” uitrekenen
 
     while T > Tend:                   # zolang de temperatuur nog boven de eind-temp is (we zijn nog “los”)
         for _ in range(iters):        # doe een aantal pogingen (swaps) op deze temperatuur
@@ -165,10 +165,10 @@ def sa(open_tours, T=400.0, Tend=1.0, alpha=0.995, iters=200, seed=42):
             new = [r[:] for r in cur]                 # diepe kopie (zodat we cur niet verpesten)
             new[d1][i1], new[d2][i2] = new[d2][i2], new[d1][i1]  # daadwerkelijke swap
 
-            # reken domweg de totale tijd uit voor en na de swap (simpel > snel)
-            cur_total = max(tour_len(r) for r in cur)  # bereken de tijd van de langste route (laatste bezorger klaar)
-            new_total = max(tour_len(r) for r in new)  # nieuwe totale eindtijd (langste route) na een swap
-            delta = new_total - cur_total              # positief = slechter, negatief = beter
+            # reken de maximale tijd uit voor en na de swap (simpel > snel)
+            cur_max = max(tour_len(r) for r in cur)  # bereken de tijd van de langste route (laatste bezorger klaar)
+            new_max = max(tour_len(r) for r in new)  # nieuwe totale eindtijd (langste route) na een swap
+            delta = new_max - cur_max              # positief = slechter, negatief = beter
 
             # Simulated Annealing-regel:
             # als beter (delta < 0): altijd accepteren
@@ -180,9 +180,9 @@ def sa(open_tours, T=400.0, Tend=1.0, alpha=0.995, iters=200, seed=42):
                 cur[d2] = two_opt(cur[d2])
 
                 # update “best” als het geheel nu echt korter is dan wat we ooit hadden
-                cur_total = sum(tour_len(r) for r in cur)
-                if cur_total < best_total:
-                    best, best_total = [r[:] for r in cur], cur_total
+                cur_max = max(tour_len(r) for r in cur)
+                if cur_max < best_max:
+                    best, best_max = [r[:] for r in cur], cur_max
 
         T *= alpha                         # afkoelfactor na elke ronde doen we T = T * alpha  langzaam afkoelen
         """
