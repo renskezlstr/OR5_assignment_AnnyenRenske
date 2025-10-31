@@ -48,8 +48,8 @@ def path_time_units(path):
 tour_times = []
 for d, tour in enumerate(tours, start=1):
     T = path_time_units(tour)                       # bereken tijd voor deze chauffeur in time units
-    tour_times.append(T)                            # sla op
-    print(f"Tour {d}:", tour)                       # print de route
+    tour_times.append(T)                            
+    print(f"Tour {d}:", tour)                       
 
 # print de lengte per tour in time units
 for d, T in enumerate(tour_times, start=1):
@@ -73,25 +73,25 @@ plt.scatter(coords[depot, 0], coords[depot, 1], s=120, color='hotpink', marker='
 
 # titel + labels
 plt.title(f"Routes per chauffeur (Greedy: nearest-driver-to-customer)")
-plt.xlabel("X-coördinaat")                          # x-as label
-plt.ylabel("Y-coördinaat")                          # y-as label
-plt.legend()                                        # toon legenda
-plt.grid(True)                                      # rasterlijn
-plt.tight_layout()                                  # netjes positioneren
-plt.show()                                          # toon de grafiek
+plt.xlabel("X-coördinaat")                          
+plt.ylabel("Y-coördinaat")                          
+plt.legend()                                        
+plt.grid(True)                                      
+plt.tight_layout()                                  
+plt.show()                                          
 
 
-# *******Metaheuristiek – 2-opt + swap/relocate + Simulated Annealing (met cap <=30)*******
+# *******Metaheuristiek – 2-opt + swap/relocate (met cap <=30)*******
 
 import random, math             
 import numpy as np              
 import matplotlib.pyplot as plt 
 
 # *******CAP-instellingen voor de metaheuristiek*******
-MAX_STOPS_PER_DRIVER = 30        # ***Harde grens: per bezorger max 30 klanten***
-BIG_M = 1_000_000                # ***Grote boete*** per extra klant boven de cap (duwt SA naar geldige oplossingen)
+MAX_STOPS_PER_DRIVER = 30        # Harde grens: per bezorger max 30 klanten
+BIG_M = 1_000_000                # Grote boete per extra klant boven de cap (duwt SA naar geldige oplossingen)
 
-# *******tour_len: reken hoeveel tijd één route kost*******
+# *******tour_len: reken hoeveel tijd een route kost*******
 def tour_len(t):
     if not t:                   # als de route leeg is (niemand bezoeken)
         return 0                # kost het 0 tijd
@@ -105,8 +105,8 @@ def tour_len(t):
 # *******helper: totale “meta-kost” inclusief cap-boete*******
 def meta_cost(routes):
     """normale reistijd + giga-boete voor elke extra klant boven cap"""
-    cost = sum(tour_len(r) for r in routes)             # gewone som van tijden
-    # boete: voor elke route met teveel stops → (aantal_excess) * BIG_M
+    cost = sum(tour_len(r) for r in routes)             # som van tijden
+    # boete: voor elke route met teveel stops > (aantal_excess) * BIG_M
     penalty = sum(max(0, len(r) - MAX_STOPS_PER_DRIVER) for r in routes) * BIG_M
     return cost + penalty
 
@@ -114,19 +114,19 @@ def meta_cost(routes):
 def two_opt(t):
     n = len(t)                 # hoeveel stops zitten er in de route?
     if n < 4:                  # minder dan 4? dan kan 2-opt niks verbeteren
-        return t               # teruggeven zoals-ie is
+        return t               # teruggeven zoals ie is
     improved = True            # proberen te verbeteren totdat het niet meer kan
     while improved:            # blijf loopen zolang er winst te vinden is
         improved = False       # reset: er is nog geen nieuwe winst gevonden
         best_gain = 0          # beste winst tot nu toe = 0 (niks)
         best_i = best_k = None # waar we moeten stoppen? is nog niet bekend
-        for i in range(n-1):   # eerste stop-plek proberen
+        for i in range(n-1):   # eerste stop plek proberen
             prev = depot if i == 0 else t[i-1]   # wat zit voor i? aan het begin is dat het depot
-            for k in range(i+1, n):              # tweede stop-plek proberen
+            for k in range(i+1, n):              # tweede stop plek proberen
                 nxt = t[k+1] if k+1 < n else None  # wat zit na k? niets als k het einde is
-                # oud = wat het nu kost rondom het stukje (prev→i en k→nxt)
+                # oud = wat het nu kost rondom het stukje (prev>i en k>nxt)
                 old = distance_matrix[(prev, t[i])] + (distance_matrix[(t[k], nxt)] if nxt else 0)
-                # nieuw = wat het kost als we het stukje i..k omdraaien (prev→k en i→nxt)
+                # nieuw = wat het kost als we het stukje i..k omdraaien (prev>k en i>nxt)
                 new = distance_matrix[(prev, t[k])] + (distance_matrix[(t[i], nxt)] if nxt else 0)
                 gain = old - new                 # positieve gain = korter 
                 if gain > best_gain:            # is dit de beste tot nu toe?
@@ -146,7 +146,7 @@ def try_swap(routes, d1, d2, i1, i2):
     r1, r2 = routes[d1], routes[d2]        # pak de twee routes
     new1, new2 = r1[:], r2[:]              # maak kopieën (origineel niet kapot maken)
     new1[i1], new2[i2] = r2[i2], r1[i1]    # swap de twee gekozen klanten
-    # swap verandert het aantal stops per route NIET → cap blijft oké (als het al oké was)
+    # swap verandert het aantal stops per route NIET > cap blijft oke (als het al oke was)
     out = [r[:] for r in routes]           # kopie van alle routes
     out[d1], out[d2] = new1, new2          # vervang de twee aangepaste routes
     return out                             # we beoordelen straks via meta_cost of dit goed is
@@ -155,8 +155,8 @@ def try_swap(routes, d1, d2, i1, i2):
 def try_relocate(routes, d_from, d_to, i_from):
     """verplaats klant op index i_from van route d_from naar het EINDE van route d_to"""
     if d_from == d_to or not routes[d_from]: 
-        return None                         # niks te verplaatsen of zelfde route → skip
-    # ***CAP CHECK: d_to mag na verplaatsen NIET > 30 worden***
+        return None                         # niks te verplaatsen of zelfde route > skip
+    # CAP CHECK: d_to mag na verplaatsen NIET > 30 worden
     if len(routes[d_to]) >= MAX_STOPS_PER_DRIVER:
         return None
     new_routes = [r[:] for r in routes]     # kopie van alles
@@ -165,33 +165,32 @@ def try_relocate(routes, d_from, d_to, i_from):
     return new_routes
 
 # *******sa: Simulated Annealing met cap (via boete) + moves: swap & relocate*******
-def sa(open_tours, T=400.0, Tend=1.0, alpha=0.995, iters=200, seed=42):
+def sa(open_tours, T=200.0, Tend=2.0, alpha=0.995, iters=200, seed=42):
     import random, math              # we gebruiken toeval (random) en (math) dus welke methode gaan we gebruiken
     random.seed(seed)                # zet de “dobbelsteen” vast (voor reproduceerbaarheid)
 
     # start: maak eerst elke route lokaal beter met 2-opt 
     cur = [two_opt(r[:]) for r in open_tours]   # kopieer elke route en 2-opt het
-    best = [r[:] for r in cur]                  # “best tot nu toe” = wat we nu hebben
-    best_cost = meta_cost(cur)                  # ***let op: meta-kost met cap-boete***
-
-    while T > Tend:                   # zolang de temperatuur nog boven de eind-temp is (we zijn nog “los”)
-        for _ in range(iters):        # doe een aantal pogingen (moves) op deze temperatuur
+    best = [r[:] for r in cur]                  # best tot nu toe = wat we nu hebben
+    best_cost = meta_cost(cur)                  # bereken de meta kost van de startoplossing
+    while T > Tend:                   # zolang de temperatuur nog boven de eind-temp is 
+        for _ in range(iters):        # doe een aantal pogingen op deze temperatuur
             # kies 2 willekeurige verschillende routes
             d1, d2 = random.sample(range(len(cur)), 2)
-            if not cur[d1] and not cur[d2]:     # allebei leeg → useless
+            if not cur[d1] and not cur[d2]:     # allebei leeg is useless
                 continue
 
             # kies move-type: 50% swap, 50% relocate (relocate helpt om cap te fixen)
             do_swap = (random.random() < 0.5)
 
             if do_swap and cur[d1] and cur[d2]:
-                # --- SWAP: ruil één klant uit d1 en d2 ---
+                # SWAP: ruil één klant uit d1 en d2
                 i1 = random.randrange(len(cur[d1]))
                 i2 = random.randrange(len(cur[d2]))
                 cand = try_swap(cur, d1, d2, i1, i2)
             else:
-                # --- RELOCATE: verplaats één klant van d1 naar d2 (alleen als d2 nog ruimte heeft) ---
-                # kies een niet-lege bron
+                # RELOCATE: verplaats één klant van d1 naar d2 (alleen als d2 nog ruimte heeft)
+                # kies een niet lege bron
                 source = d1 if cur[d1] else d2
                 target = d2 if source == d1 else d1
                 # als target al vol zit (>= cap), skip deze poging
@@ -222,13 +221,13 @@ def sa(open_tours, T=400.0, Tend=1.0, alpha=0.995, iters=200, seed=42):
                 if new_cost < best_cost:         # update best ooit
                     best, best_cost = [r[:] for r in cur], new_cost
 
-        T *= alpha                         # afkoelfactor: T = T * alpha (langzaam minder random)
+        T *= alpha                         # afkoelfactor: T = T * alpha 
 
-    return best                            # geef de beste (cap-respecterende) routes terug
+    return best                            # geef de beste routes terug
 
 # *******run: start met greedy tours en optimaliseer*******
 tours0 = [r[:] for r in tours]     # kopie van de input zodat de originele routes bewaard blijven
-best_tours = sa(tours0)            # run de SA en krijg betere (en cap-vriendelijke) routes
+best_tours = sa(tours0)            # run de SA en krijg betere routes
 
 # *******print per route de tijd*******
 print("\n== RESULTATEN (open routes) ==")  
@@ -246,7 +245,7 @@ for d, (old_t, new_t) in enumerate(zip(tours, best_tours), 1):  # pak oude en ni
 coords = np.array(coordinates)         # lijst met (x,y) van depot en klanten
 palette = colors
 
-plt.figure(figsize=(8,6))              # maak een plaatje van 8x6 
+plt.figure(figsize=(8,6))               
 for d, t in enumerate(best_tours):     # voor elke route:
     if not t:                          # lege route? skip
         continue
