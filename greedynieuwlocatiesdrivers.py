@@ -143,7 +143,7 @@ def try_swap(routes, d1, d2, i1, i2):
     return None                            # niet beter dus niks doen
 
 # *******sa: Simulated Annealing = soms ook slechte routes toestaan om uit local trap te komen*******
-def sa(open_tours, T=400.0, Tend=1.0, alpha=0.995, iters=200, seed=42):
+def sa(open_tours, T=200.0, Tend=2.0, alpha=0.995, iters=200, seed=42):
     import random, math              # we gebruiken toeval (random) en (math) dus welke methode gaan we gebruiken
     random.seed(seed)                # zet de “dobbelsteen” vast (voor reproduceerbaarheid)
     # start: maak eerst elke route lokaal beter met 2-opt 
