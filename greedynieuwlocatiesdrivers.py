@@ -151,7 +151,7 @@ def sa(open_tours, T=400.0, Tend=1.0, alpha=0.995, iters=200, seed=42):
     best = [r[:] for r in cur]                  # “best tot nu toe” = wat we nu hebben
     best_max = max(tour_len(r) for r in cur)  # totale tijd van “best” uitrekenen
 
-    while T > Tend:                   # zolang de temperatuur nog boven de eind-temp is (we zijn nog “los”)
+    while T > Tend:                   # zolang de temperatuur nog boven de eind-temp is 
         for _ in range(iters):        # doe een aantal pogingen (swaps) op deze temperatuur
             # kies 2 willekeurige verschillende routes
             d1, d2 = random.sample(range(len(cur)), 2)
